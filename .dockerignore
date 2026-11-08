@@ -1,0 +1,8 @@
+node_modules
+coverage
+reports
+.git
+.env
+Dockerfile
+*.md
+captures
