@@ -1,0 +1,24 @@
+{
+  "name": "api-starter",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "migrate": "node src/migrate.js",
+    "test": "vitest run --exclude tests/integration/**",
+    "test:coverage": "vitest run --coverage --exclude tests/integration/**",
+    "test:integration": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^8.0.0",
+    "pg": "^8.13.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.0",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.0"
+  }
+}
