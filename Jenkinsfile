@@ -7,7 +7,8 @@ pipeline {
         skipDefaultCheckout(true)
     }
     environment {
-        IMAGE_NAME  = "docker.io/<TON_USER_DOCKERHUB>/contact-api"
+        // ⚠️ REMPLACE ICI par ton username Docker Hub
+        IMAGE_NAME  = "docker.io/narjess805/contact-api" 
         DOCKER_CRED = "dockerhub"
     }
     stages {
@@ -33,7 +34,8 @@ pipeline {
                             steps {
                                 sh 'npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
                             }
-                            post { always { junit 'reports/junit.xml' } }
+                            // ✅ Correction de l'erreur junit ici
+                            post { always { junit testResults: 'reports/junit.xml' } }
                         }
                     }
                 }
@@ -69,7 +71,8 @@ pipeline {
     }
     post {
         always {
-            junit 'reports/junit.xml', allowEmptyResults: true
+            // ✅ Correction de l'erreur junit ici aussi
+            junit testResults: 'reports/junit.xml', allowEmptyResults: true
             archiveArtifacts artifacts: 'reports/junit.xml', allowEmptyArchive: true
         }
         success { echo "✅ Pipeline réussi — ${env.IMAGE_NAME}:${env.SHORT_SHA}" }
