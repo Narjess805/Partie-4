@@ -23,24 +23,38 @@ pipeline {
                 }
             }
         }
+        
         stage('Install & Quality') {
-            agent { docker { image 'node:24-alpine'; reuseNode true } }
+            // Contournement : on utilise l'agent principal et on lance Docker manuellement
+            // à la place de l'agent { docker { ... } }
             stages {
-                stage('Install') { steps { sh 'npm ci' } }
+                stage('Install') {
+                    steps {
+                        sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm ci'
+                    }
+                }
                 stage('Quality') {
                     parallel {
-                        stage('Lint') { steps { sh 'npm run lint' } }
+                        stage('Lint') {
+                            steps {
+                                sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm run lint'
+                            }
+                        }
                         stage('Unit tests') {
                             steps {
-                                sh 'npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
+                                sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
                             }
-                            // ✅ Correction de l'erreur junit ici
-                            post { always { junit testResults: 'reports/junit.xml' } }
+                            post { 
+                                always { 
+                                    junit testResults: 'reports/junit.xml' 
+                                } 
+                            }
                         }
                     }
                 }
             }
         }
+        
         stage('Build') {
             steps {
                 sh """
@@ -54,6 +68,7 @@ pipeline {
                 archiveArtifacts artifacts: 'image.txt', fingerprint: true
             }
         }
+        
         stage('Push') {
             when { expression { env.IS_MAIN == 'true' } }
             steps {
@@ -71,7 +86,6 @@ pipeline {
     }
     post {
         always {
-            // ✅ Correction de l'erreur junit ici aussi
             junit testResults: 'reports/junit.xml', allowEmptyResults: true
             archiveArtifacts artifacts: 'reports/junit.xml', allowEmptyArchive: true
         }
