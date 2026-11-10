@@ -12,18 +12,19 @@ pipeline {
         DOCKER_CRED = "dockerhub"
     }
     stages {
-        stage('Checkout') {
+                stage('Checkout') {
             steps {
                 checkout scm
                 script {
+                    // On récupère le SHA avec git directement (car skipDefaultCheckout le rend parfois vide)
+                    env.GIT_COMMIT = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
                     env.SHORT_SHA = env.GIT_COMMIT.take(7)
                     env.IS_MAIN   = (env.BRANCH_NAME == 'main') ? 'true' : 'false'
                     echo "SHA court : ${env.SHORT_SHA}"
                     echo "Branche   : ${env.BRANCH_NAME ?: 'PR'}"
                 }
             }
-        }
-        
+        }        
         stage('Install & Quality') {
             // Contournement : on utilise l'agent principal et on lance Docker manuellement
             // à la place de l'agent { docker { ... } }
