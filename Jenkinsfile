@@ -8,7 +8,7 @@ pipeline {
     }
     environment {
         // ⚠️ REMPLACE ICI PAR TON USERNAME DOCKER HUB
-        IMAGE_NAME  = "docker.io/narjess805/contact-api" 
+        IMAGE_NAME  = "docker.io/narjessdabbech/contact-api" 
         DOCKER_CRED = "dockerhub"
     }
     stages {
