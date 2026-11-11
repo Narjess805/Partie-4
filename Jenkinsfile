@@ -53,7 +53,6 @@ pipeline {
             }
         }
 
-        // ✅ STAGE SECURITY (frère de Install & Quality)
         stage('Security') {
             parallel {
                 stage('Gitleaks') {
@@ -67,11 +66,10 @@ pipeline {
                     }
                 }
                 stage('npm audit') {
-    steps {
-        // On ignore les erreurs liées à tinypool/esbuild (dépendances de dev)
-        sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm audit --audit-level=high || true'
-    }
-               }
+                    steps {
+                        sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm audit --audit-level=high || true'
+                    }
+                }
             }
             post {
                 always {
@@ -94,11 +92,11 @@ pipeline {
             }
         }
 
-        // ✅ STAGE IMAGE SCAN (frère de Build)
         stage('Image scan') {
             steps {
                 sh """
                     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
+                      -v trivy-cache:/root/.cache/trivy \\
                       aquasec/trivy:latest image \\
                       --exit-code 1 --severity CRITICAL \\
                       ${env.IMAGE_NAME}:${env.SHORT_SHA}
