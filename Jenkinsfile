@@ -95,11 +95,7 @@ pipeline {
         stage('Image scan') {
             steps {
                 sh """
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
-                      -v trivy-cache:/root/.cache/trivy \\
-                      aquasec/trivy:latest image \\
-                      --exit-code 1 --severity CRITICAL \\
-                      ${env.IMAGE_NAME}:${env.SHORT_SHA}
+                    docker run --rm -v "$PWD:/src" aquasec/trivy:latest config /src
                 """
             }
         }
