@@ -7,8 +7,7 @@ pipeline {
         skipDefaultCheckout(true)
     }
     environment {
-        // ⚠️ REMPLACE ICI PAR TON USERNAME DOCKER HUB
-        IMAGE_NAME  = "docker.io/narjessdabbech/contact-api" 
+        IMAGE_NAME  = "docker.io/narjessdabbech/contact-api"
         DOCKER_CRED = "dockerhub"
     }
     stages {
@@ -16,7 +15,6 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    // Récupération manuelle du SHA (contourne le problème de skipDefaultCheckout)
                     env.GIT_COMMIT = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
                     env.SHORT_SHA = env.GIT_COMMIT.take(7)
                     env.IS_MAIN   = (env.BRANCH_NAME == 'main') ? 'true' : 'false'
@@ -25,12 +23,11 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Install & Quality') {
             stages {
                 stage('Install') {
                     steps {
-                        // Utilisation de docker run à la place de l'agent docker manquant
                         sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm ci'
                     }
                 }
@@ -43,20 +40,45 @@ pipeline {
                         }
                         stage('Unit tests') {
                             steps {
-                                // Cible UNIQUEMENT contact.test.js pour éviter l'erreur de base de données
                                 sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npx vitest run tests/contact.test.js --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
                             }
-                            post { 
-                                always { 
-                                    junit testResults: 'reports/junit.xml' 
-                                } 
+                            post {
+                                always {
+                                    junit testResults: 'reports/junit.xml'
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        
+
+        // ✅ STAGE SECURITY (frère de Install & Quality)
+        stage('Security') {
+            parallel {
+                stage('Gitleaks') {
+                    steps {
+                        sh 'docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.0 detect --source /repo -v'
+                    }
+                }
+                stage('Semgrep') {
+                    steps {
+                        sh 'docker run --rm -v "$PWD:/src" semgrep/semgrep semgrep scan --config p/javascript --config p/owasp-top-ten --error /src'
+                    }
+                }
+                stage('npm audit') {
+                    steps {
+                        sh 'docker run --rm -v "$PWD:/app" -w /app node:24-alpine npm audit --audit-level=high'
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 sh """
@@ -70,9 +92,20 @@ pipeline {
                 archiveArtifacts artifacts: 'image.txt', fingerprint: true
             }
         }
-        
+
+        // ✅ STAGE IMAGE SCAN (frère de Build)
+        stage('Image scan') {
+            steps {
+                sh """
+                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
+                      aquasec/trivy:latest image \\
+                      --exit-code 1 --severity CRITICAL \\
+                      ${env.IMAGE_NAME}:${env.SHORT_SHA}
+                """
+            }
+        }
+
         stage('Push') {
-            // Ne s'exécute que sur la branche main
             when { expression { env.IS_MAIN == 'true' } }
             steps {
                 withCredentials([usernamePassword(
